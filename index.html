@@ -314,11 +314,11 @@
                     <div class="form-group">
                         <label for="modelSelect">AI Model:</label>
                         <select id="modelSelect" class="form-control">
-                            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</option>
-                            <option value="deepseek/deepseek-r1-0528:free">DeepSeek R1  (Free)</option>
-                            <option value="deepseek/deepseek-chat-v3-0324:free">deepseek-chat-v3-0324 (Free)</option>
-                            <!-- <option value="google/gemma-3n-e2b-it:free"> Gemma 3n-e2b-it (Free)</option> -->
-                            <option value="qwen/qwen3-coder:free">Qwen3 coder (Free)</option>
+                            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free) - Vision ✓</option>
+                            <option value="anthropic/claude-3.5-sonnet:free">Claude 3.5 Sonnet (Free) - Vision ✓</option>
+                            <option value="openai/gpt-4o-mini:free">GPT-4o Mini (Free) - Vision ✓</option>
+                            <option value="meta-llama/llama-3.2-11b-vision-instruct:free">Llama 3.2 11B Vision (Free) - Vision ✓</option>
+                            <option value="qwen/qwen2-vl-7b-instruct:free">Qwen2 VL 7B (Free) - Vision ✓</option>
                         </select>
                     </div>
                     <button id="enableBtn" class="btn btn-primary">Enable Camera</button>
@@ -548,6 +548,32 @@
                 throw new Error('Not authenticated. Please login first.');
             }
 
+            console.log('Sending request to:', OPENROUTER_URL);
+            console.log('Using model:', modelSelect.value);
+            console.log('Image data length:', base64Image.length);
+
+            const requestBody = {
+                model: modelSelect.value,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"'
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:image/jpeg;base64,${base64Image}`
+                            }
+                        }
+                    ]
+                }],
+                max_tokens: 1000
+            };
+
+            console.log('Request payload:', JSON.stringify(requestBody, null, 2));
+
             const response = await fetch(OPENROUTER_URL, {
                 method: 'POST',
                 headers: {
@@ -556,35 +582,26 @@
                     'HTTP-Referer': window.location.origin,
                     'X-Title': 'OneClick Problem Solver'
                 },
-                body: JSON.stringify({
-                    model: modelSelect.value,
-                    messages: [{
-                        role: 'user',
-                        content: [
-                            {
-                                type: 'text',
-                                text: 'You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"'
-                            },
-                            {
-                                type: 'image_url',
-                                image_url: {
-                                    url: `data:image/jpeg;base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }]
-                })
+                body: JSON.stringify(requestBody)
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', [...response.headers.entries()]);
+
             if (!response.ok) {
-                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`API request failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('API Response:', data);
+            
             const answer = data.choices?.[0]?.message?.content;
 
             if (!answer) {
-                throw new Error('No answer received from AI');
+                console.error('No answer in response:', data);
+                throw new Error('No answer received from AI. Response: ' + JSON.stringify(data));
             }
 
             return answer.trim();
