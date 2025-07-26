@@ -339,18 +339,19 @@
             try {
                 console.log('Starting authentication for user:', username);
                 
-                // Create Basic Auth header
-                const credentials = btoa(`${username}:${password}`);
                 const url = `${AUTH_URL}`;
                 console.log('Making request to:', url);
                 
                 const response = await fetch(url, {
-                    method: 'GET',
+                    method: 'POST',
                     mode: 'cors',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Basic ${credentials}`
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
                 });
 
                 console.log('Response status:', response.status);
