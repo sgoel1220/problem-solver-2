@@ -184,7 +184,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .auth-container {
@@ -237,6 +237,21 @@
         }
 
         .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+        }
+
+        .form-control:focus {
             outline: none;
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
@@ -296,6 +311,16 @@
                 </div>
 
                 <div class="controls">
+                    <div class="form-group">
+                        <label for="modelSelect">AI Model:</label>
+                        <select id="modelSelect" class="form-control">
+                            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</option>
+                            <option value="deepseek/deepseek-r1-0528:free">DeepSeek R1  (Free)</option>
+                            <option value="deepseek/deepseek-chat-v3-0324:free">deepseek-chat-v3-0324 (Free)</option>
+                            <!-- <option value="google/gemma-3n-e2b-it:free"> Gemma 3n-e2b-it (Free)</option> -->
+                            <option value="qwen/qwen3-coder:free">Qwen3 coder (Free)</option>
+                        </select>
+                    </div>
                     <button id="enableBtn" class="btn btn-primary">Enable Camera</button>
                     <button id="captureBtn" class="btn btn-primary hidden">Capture & Solve</button>
                     <button id="switchBtn" class="btn btn-secondary hidden">Switch Camera</button>
@@ -333,6 +358,7 @@
         const stopBtn = document.getElementById('stopBtn');
         const answerDisplay = document.getElementById('answerDisplay');
         const cameraMode = document.getElementById('cameraMode');
+        const modelSelect = document.getElementById('modelSelect');
 
         // Authentication functions
         async function authenticateUser(username, password) {
@@ -531,7 +557,7 @@
                     'X-Title': 'OneClick Problem Solver'
                 },
                 body: JSON.stringify({
-                    model: 'google/gemini-2.0-flash-exp:free',
+                    model: modelSelect.value,
                     messages: [{
                         role: 'user',
                         content: [
