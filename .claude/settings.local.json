@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cmd /c \"git remote add origin https://github.com/sgoel1220/problem-solver-2.git\")"
+      "Bash(cmd /c \"git remote add origin https://github.com/sgoel1220/problem-solver-2.git\")",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

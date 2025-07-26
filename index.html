@@ -309,7 +309,7 @@
 
     <script>
         // API Configuration
-        const AUTH_URL = 'https://script.google.com/macros/s/AKfycbyPlA-Fwt-IcRRBQgjJZvTaYH79ENqFC7gT7by_H46neqMN8yd-mF3cDTRnJS3_qu3R/exec';
+        const AUTH_URL = 'https://test-j3r4d5aem-asd-asds-projects-8cac876d.vercel.app/api/hello';
         const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
         
         let geminiApiKey = null;
@@ -337,30 +337,37 @@
         // Authentication functions
         async function authenticateUser(username, password) {
             try {
-                const credentials = btoa(`${username}:${password}`);
+                console.log('Starting authentication for user:', username);
                 
-                // Use JSONP approach for Google Apps Script to avoid CORS
-                const response = await fetch(AUTH_URL, {
-                    method: 'POST',
+                // Use GET request with name parameter
+                const url = `${AUTH_URL}`;
+                console.log('Making request to:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
                     mode: 'cors',
                     headers: {
                         'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        auth: `Basic ${credentials}`
-                    })
+                        'Host': 'script.google.com'
+                    }
                 });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
 
                 if (!response.ok) {
                     throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
                 }
 
                 const data = await response.json();
+                console.log('Response data:', data);
+                
                 if (!data.value) {
                     throw new Error('No API key received from server');
                 }
 
                 geminiApiKey = data.value;
+                console.log('Authentication successful, API key received');
                 return true;
             } catch (error) {
                 console.error('Auth error:', error);
