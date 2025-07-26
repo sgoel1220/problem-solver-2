@@ -310,9 +310,9 @@
     <script>
         // API Configuration
         const AUTH_URL = 'https://test-umber-seven-44.vercel.app/api/hello';
-        const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+        const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
         
-        let geminiApiKey = null;
+        let openRouterApiKey = null;
 
         // Global variables
         let stream = null;
@@ -339,7 +339,8 @@
             try {
                 console.log('Starting authentication for user:', username);
                 
-                // Use GET request with name parameter
+                // Create Basic Auth header
+                const credentials = btoa(`${username}:${password}`);
                 const url = `${AUTH_URL}`;
                 console.log('Making request to:', url);
                 
@@ -348,7 +349,7 @@
                     mode: 'cors',
                     headers: {
                         'Content-Type': 'application/json',
-                        // 'Host': 'script.google.com'
+                        'Authorization': `Basic ${credentials}`
                     }
                 });
 
@@ -362,11 +363,11 @@
                 const data = await response.json();
                 console.log('Response data:', data);
                 
-                if (!data.value) {
-                    throw new Error('No API key received from server');
+                if (!data.key) {
+                    throw new Error('No OpenRouter key received from server');
                 }
 
-                geminiApiKey = data.value;
+                openRouterApiKey = data.key;
                 console.log('Authentication successful, API key received');
                 return true;
             } catch (error) {
@@ -516,25 +517,31 @@
 
         // Send image to Gemini API
         async function solveProblem(base64Image) {
-            if (!geminiApiKey) {
+            if (!openRouterApiKey) {
                 throw new Error('Not authenticated. Please login first.');
             }
 
-            const response = await fetch(`${GEMINI_URL}?key=${geminiApiKey}`, {
+            const response = await fetch(OPENROUTER_URL, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'OneClick Problem Solver'
                 },
                 body: JSON.stringify({
-                    contents: [{
-                        parts: [
+                    model: 'google/gemini-2.0-flash-exp:free',
+                    messages: [{
+                        role: 'user',
+                        content: [
                             {
+                                type: 'text',
                                 text: 'You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"'
                             },
                             {
-                                inline_data: {
-                                    mime_type: 'image/jpeg',
-                                    data: base64Image
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:image/jpeg;base64,${base64Image}`
                                 }
                             }
                         ]
@@ -547,7 +554,7 @@
             }
 
             const data = await response.json();
-            const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const answer = data.choices?.[0]?.message?.content;
 
             if (!answer) {
                 throw new Error('No answer received from AI');
