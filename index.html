@@ -533,6 +533,11 @@
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64Image = imageData.split(',')[1];
 
+                console.log('Image captured successfully');
+                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+                console.log('Base64 image length:', base64Image.length);
+                console.log('First 100 chars of base64:', base64Image.substring(0, 100));
+
                 // Send to AI
                 const answer = await solveProblem(base64Image);
                 showAnswer(answer);
@@ -572,7 +577,8 @@
                         }
                     ]
                 }],
-                max_tokens: 1000
+                max_tokens: 1000,
+                temperature: 0.1
             };
 
             console.log('Request payload:', JSON.stringify(requestBody, null, 2));
@@ -594,17 +600,32 @@
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error Response:', errorText);
-                throw new Error(`API request failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
+                let errorDetails = errorText;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorDetails = errorJson.error?.message || errorText;
+                } catch (e) {
+                    // Keep original error text if not JSON
+                }
+                throw new Error(`API request failed: ${response.status} ${response.statusText}. Details: ${errorDetails}`);
             }
 
             const data = await response.json();
-            console.log('API Response:', data);
+            console.log('Full API Response:', JSON.stringify(data, null, 2));
             
-            const answer = data.choices?.[0]?.message?.content;
+            // Check for different response structures
+            const answer = data.choices?.[0]?.message?.content || 
+                          data.choices?.[0]?.text || 
+                          data.message?.content ||
+                          data.content;
 
             if (!answer) {
-                console.error('No answer in response:', data);
-                throw new Error('No answer received from AI. Response: ' + JSON.stringify(data));
+                console.error('No answer found in response structure. Full response:', data);
+                console.log('Available keys in response:', Object.keys(data));
+                if (data.choices && data.choices[0]) {
+                    console.log('Available keys in choices[0]:', Object.keys(data.choices[0]));
+                }
+                throw new Error('No answer received from AI. Response structure: ' + JSON.stringify(data, null, 2));
             }
 
             return answer.trim();
