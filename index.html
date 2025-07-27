@@ -119,6 +119,7 @@
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1); /* Mirror front camera */
+            cursor: crosshair; /* Show focus cursor */
         }
 
         .video-overlay {
@@ -353,49 +354,139 @@
             font-weight: 600;
         }
 
-        .answer-content h1 { font-size: 24px; }
-        .answer-content h2 { font-size: 20px; }
-        .answer-content h3 { font-size: 18px; }
-        .answer-content h4 { font-size: 16px; }
+        .answer-content h1 { font-size: 20px; }
+        .answer-content h2 { font-size: 18px; }
+        .answer-content h3 { font-size: 16px; }
+        .answer-content h4 { font-size: 15px; }
+
+        @media (min-width: 768px) {
+            .answer-content h1 { font-size: 24px; }
+            .answer-content h2 { font-size: 20px; }
+            .answer-content h3 { font-size: 18px; }
+            .answer-content h4 { font-size: 16px; }
+        }
 
         .answer-content p {
             margin: 8px 0;
             line-height: 1.6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .answer-content ul, .answer-content ol {
-            margin: 8px 0 8px 20px;
+            margin: 8px 0 8px 16px;
             line-height: 1.6;
+            padding-left: 4px;
+        }
+
+        @media (min-width: 768px) {
+            .answer-content ul, .answer-content ol {
+                margin-left: 20px;
+                padding-left: 0;
+            }
         }
 
         .answer-content li {
             margin: 4px 0;
+            word-wrap: break-word;
         }
 
         .answer-content code {
             background: #f0f0f0;
-            padding: 2px 6px;
+            padding: 2px 4px;
             border-radius: 3px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+            font-size: 12px;
             color: #d63384;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        @media (min-width: 768px) {
+            .answer-content code {
+                font-size: 14px;
+                padding: 2px 6px;
+            }
         }
 
         .answer-content pre {
             background: #f8f9fa;
-            padding: 12px;
+            padding: 8px;
             border-radius: 6px;
             border-left: 4px solid #4caf50;
             margin: 12px 0;
             overflow-x: auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (min-width: 768px) {
+            .answer-content pre {
+                padding: 12px;
+                font-size: 14px;
+                white-space: pre;
+            }
         }
 
         .answer-content pre code {
             background: none;
             padding: 0;
             color: #333;
+            font-size: inherit;
+            white-space: inherit;
+        }
+
+        /* Mobile-specific code block improvements */
+        @media (max-width: 767px) {
+            .answer-content pre {
+                margin-left: -15px;
+                margin-right: -15px;
+                border-radius: 0;
+                border-left: none;
+                border-top: 3px solid #4caf50;
+                position: relative;
+            }
+            
+            .answer-content pre::before {
+                content: "Code";
+                position: absolute;
+                top: -20px;
+                left: 8px;
+                font-size: 10px;
+                color: #666;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-weight: 500;
+            }
+            
+            /* Better mobile text formatting */
+            .answer-content {
+                font-size: 15px;
+                line-height: 1.5;
+            }
+            
+            .answer-content strong {
+                font-size: 16px;
+            }
+            
+            .answer-content h1, .answer-content h2 {
+                border-bottom: 2px solid #e8f5e8;
+                padding-bottom: 4px;
+                margin-bottom: 12px;
+            }
+            
+            /* Better spacing on mobile */
+            .answer-content > *:first-child {
+                margin-top: 0;
+            }
+            
+            .answer-content > *:last-child {
+                margin-bottom: 0;
+            }
         }
 
         .answer-content blockquote {
@@ -446,6 +537,43 @@
             border-top: 2px solid #e0e0e0;
             margin: 16px 0;
         }
+
+        /* Focus indicator styles */
+        .focus-indicator {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border: 2px solid #4caf50;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
+        }
+
+        .focus-indicator.show {
+            opacity: 1;
+        }
+
+        .focus-indicator.animate {
+            animation: focusPulse 0.6s ease-out;
+        }
+
+        @keyframes focusPulse {
+            0% {
+                transform: scale(1.5);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+        }
     </style>
 </head>
 <body>
@@ -492,9 +620,11 @@
                 
                 <div id="videoContainer">
                     <video id="video" autoplay playsinline muted class="hidden"></video>
+                    <div id="focusIndicator" class="focus-indicator"></div>
                     <div id="videoOverlay" class="video-overlay">
                         <div class="camera-icon">📷</div>
                         <p>Click "Enable Camera" to start</p>
+                        <p style="font-size: 12px; margin-top: 8px; opacity: 0.8;">Tap on camera to focus</p>
                     </div>
                 </div>
 
@@ -539,7 +669,17 @@
                     
                     <div class="form-group">
                         <label for="customPrompt">Custom Prompt:</label>
-                        <textarea id="customPrompt" class="form-control" rows="3" placeholder="Enter your custom prompt for the AI model...">You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"</textarea>
+                        <textarea id="customPrompt" class="form-control" rows="3" placeholder="Enter your custom prompt for the AI model...">You will receive an image containing a problem statement. Please:
+
+1. Read the problem from the image carefully
+2. Solve it step by step 
+3. Format your response clearly with:
+   - **Answer:** [your final answer]
+   - **Explanation:** [brief explanation if needed]
+   - Use markdown formatting for code snippets with ```
+   - Keep responses concise for mobile viewing
+
+Example: **Answer:** 42</textarea>
                         <div style="display: flex; gap: 8px; margin-top: 8px;">
                             <input type="text" id="promptName" class="form-control" placeholder="Prompt name..." style="flex: 1;">
                             <button id="savePromptBtn" class="btn btn-secondary">Save</button>
@@ -639,6 +779,7 @@
         const askFollowUpBtn = document.getElementById('askFollowUpBtn');
         const modelStatus = document.getElementById('modelStatus');
         const selectedModelInfo = document.getElementById('selectedModelInfo');
+        const focusIndicator = document.getElementById('focusIndicator');
 
         // Local Storage Functions
         function saveToLocalStorage(key, value) {
@@ -959,13 +1100,13 @@
             // Add default prompts if none exist
             if (Object.keys(savedPrompts).length === 0) {
                 const defaultPrompts = {
-                    'Quick Math': 'Solve this math problem. Give me just the **final answer** in bold. Keep it short.',
-                    'Read Text': 'Extract all text from this image. Keep original formatting.',
-                    'Explain Simply': 'Explain what you see in 2-3 sentences. Be concise and clear.',
-                    'Code Help': 'What does this code do? Give me:\n- **Purpose**: [1 line]\n- **Issues**: [if any]\n- **Rating**: [1-10]',
-                    'Study Notes': 'Create short study notes from this content:\n- **Key Points**: [bullet list]\n- **Summary**: [2 sentences max]',
-                    'Quick Scan': 'Scan this document and tell me the **main topic** and **key details** in bullet points.',
-                    'Homework Help': 'Help me with this homework. Show:\n1. **Answer**: [direct answer]\n2. **Why**: [brief explanation]'
+                    'Quick Math': 'Solve this math problem. Format response:\n**Answer:** [result]\n**Steps:** [if needed]\nKeep it mobile-friendly.',
+                    'Read Text': 'Extract all text from this image. Format with:\n- Use markdown formatting\n- Preserve structure\n- Keep readable on mobile',
+                    'Explain Simply': 'Explain what you see in 2-3 sentences. Use:\n- **Topic:** [main subject]\n- **Details:** [key points]\nBe concise and clear.',
+                    'Code Help': 'Analyze this code and format response:\n- **Purpose:** [what it does]\n- **Issues:** [problems found]\n- **Rating:** [1-10]\nUse ```code``` blocks for examples.',
+                    'Study Notes': 'Create mobile-friendly study notes:\n## Key Points\n- [bullet list]\n\n## Summary\n[2 sentences max]',
+                    'Quick Scan': 'Scan and format response:\n## Main Topic\n[topic]\n\n## Key Details\n- [bullet points]\nOptimized for mobile viewing.',
+                    'Homework Help': 'Help with homework - mobile format:\n## Answer\n[direct answer]\n\n## Explanation\n[brief why]\n\nUse markdown formatting.'
                 };
                 
                 saveSavedPrompts(defaultPrompts);
@@ -1089,6 +1230,10 @@
                 stopBtn.classList.remove('hidden');
                 cameraMode.classList.remove('hidden');
 
+                // Add tap to focus event listener
+                video.addEventListener('click', handleVideoClick);
+                video.addEventListener('touchend', handleVideoClick);
+
                 updateCameraMode();
 
             } catch (error) {
@@ -1139,6 +1284,10 @@
                 stream = null;
             }
 
+            // Remove tap to focus event listeners
+            video.removeEventListener('click', handleVideoClick);
+            video.removeEventListener('touchend', handleVideoClick);
+
             video.classList.add('hidden');
             videoOverlay.classList.remove('hidden');
             
@@ -1155,6 +1304,93 @@
         // Update camera mode display
         function updateCameraMode() {
             cameraMode.textContent = currentFacingMode === 'user' ? '📱 Front Camera' : '📷 Back Camera';
+        }
+
+        // Focus functionality
+        async function focusAtPoint(x, y) {
+            if (!stream) return;
+
+            try {
+                const videoTrack = stream.getVideoTracks()[0];
+                const capabilities = videoTrack.getCapabilities();
+                
+                // Check if manual focus is supported
+                if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
+                    const settings = videoTrack.getSettings();
+                    const constraints = {
+                        advanced: [{
+                            focusMode: 'manual',
+                            pointsOfInterest: [{x: x, y: y}]
+                        }]
+                    };
+                    
+                    await videoTrack.applyConstraints(constraints);
+                    console.log('Manual focus applied at point:', x, y);
+                } else if (capabilities.focusMode && capabilities.focusMode.includes('single-shot')) {
+                    // Use single-shot autofocus if available
+                    const constraints = {
+                        advanced: [{
+                            focusMode: 'single-shot',
+                            pointsOfInterest: [{x: x, y: y}]
+                        }]
+                    };
+                    
+                    await videoTrack.applyConstraints(constraints);
+                    console.log('Single-shot focus applied at point:', x, y);
+                } else {
+                    // Fallback: try continuous autofocus
+                    const constraints = {
+                        advanced: [{
+                            focusMode: 'continuous'
+                        }]
+                    };
+                    
+                    await videoTrack.applyConstraints(constraints);
+                    console.log('Continuous focus mode enabled');
+                }
+            } catch (error) {
+                console.log('Focus control not supported or failed:', error.message);
+                // Show visual feedback even if focus control fails
+            }
+        }
+
+        function showFocusIndicator(x, y) {
+            // Position the focus indicator
+            focusIndicator.style.left = (x - 40) + 'px'; // Center the 80px circle
+            focusIndicator.style.top = (y - 40) + 'px';
+            
+            // Reset animation classes
+            focusIndicator.classList.remove('show', 'animate');
+            
+            // Trigger animation
+            requestAnimationFrame(() => {
+                focusIndicator.classList.add('show', 'animate');
+            });
+            
+            // Hide after animation
+            setTimeout(() => {
+                focusIndicator.classList.remove('show', 'animate');
+            }, 1500);
+        }
+
+        function handleVideoClick(event) {
+            if (!stream) return;
+            
+            const rect = video.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Convert to normalized coordinates (0-1)
+            const normalizedX = x / rect.width;
+            const normalizedY = y / rect.height;
+            
+            console.log('Tap to focus at:', normalizedX, normalizedY);
+            
+            // Show visual feedback
+            showFocusIndicator(x, y);
+            
+            // Apply focus
+            focusAtPoint(normalizedX, normalizedY);
         }
 
         // Capture image and solve
@@ -1292,7 +1528,17 @@
             console.log('Using model:', actualSelectedModel || modelSelect.value);
             console.log('Image data length:', base64Image.length);
 
-            const currentPrompt = customPrompt.value.trim() || 'You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"';
+            const currentPrompt = customPrompt.value.trim() || `You will receive an image containing a problem statement. Please:
+
+1. Read the problem from the image carefully
+2. Solve it step by step 
+3. Format your response clearly with:
+   - **Answer:** [your final answer]
+   - **Explanation:** [brief explanation if needed]
+   - Use markdown formatting for code snippets with \`\`\`
+   - Keep responses concise for mobile viewing
+
+Example: **Answer:** 42`;
             
             const requestBody = {
                 model: actualSelectedModel || modelSelect.value,
@@ -1375,7 +1621,71 @@
             `;
         }
 
+        // Preprocess response for better formatting
+        function preprocessResponse(answer) {
+            // Trim whitespace
+            let processed = answer.trim();
+            
+            // Detect and format code blocks that aren't properly marked
+            // Look for common programming patterns
+            const codePatterns = [
+                /^(function|def|class|import|from|#include|public|private|var|let|const|if|for|while|switch)\s/gm,
+                /^\s*[{}()[\];]\s*$/gm,
+                /^\s*\/\/.*$/gm,
+                /^\s*#.*$/gm,
+                /^\s*\/\*[\s\S]*?\*\/\s*$/gm
+            ];
+            
+            // Check if response contains code-like content
+            const hasCodePatterns = codePatterns.some(pattern => pattern.test(processed));
+            
+            // If it looks like code but isn't in code blocks, wrap it
+            if (hasCodePatterns && !processed.includes('```')) {
+                const lines = processed.split('\n');
+                let inCodeBlock = false;
+                let result = [];
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const isCodeLine = codePatterns.some(pattern => pattern.test(line)) || 
+                                     /^\s{2,}/.test(line) || // Indented lines
+                                     /^[a-zA-Z_$][a-zA-Z0-9_$]*\s*[=:]\s*/.test(line); // Variable assignments
+                    
+                    if (isCodeLine && !inCodeBlock) {
+                        result.push('```');
+                        inCodeBlock = true;
+                    } else if (!isCodeLine && inCodeBlock && line.trim() !== '') {
+                        result.push('```');
+                        inCodeBlock = false;
+                    }
+                    
+                    result.push(line);
+                }
+                
+                if (inCodeBlock) {
+                    result.push('```');
+                }
+                
+                processed = result.join('\n');
+            }
+            
+            // Ensure proper spacing around headings
+            processed = processed.replace(/^(#{1,6}\s+.+)$/gm, '\n$1\n');
+            
+            // Ensure proper spacing around lists
+            processed = processed.replace(/^(\s*[-*+]\s+.+)$/gm, '\n$1');
+            processed = processed.replace(/^(\s*\d+\.\s+.+)$/gm, '\n$1');
+            
+            // Clean up multiple consecutive newlines
+            processed = processed.replace(/\n{3,}/g, '\n\n');
+            
+            return processed.trim();
+        }
+
         function showAnswer(answer) {
+            // Preprocess the response for better formatting
+            const processedAnswer = preprocessResponse(answer);
+            
             // Configure marked options for better rendering
             marked.setOptions({
                 breaks: true,        // Convert line breaks to <br>
@@ -1385,7 +1695,7 @@
             });
 
             // Render markdown to HTML
-            const markdownHtml = marked.parse(answer);
+            const markdownHtml = marked.parse(processedAnswer);
             
             answerDisplay.innerHTML = `
                 <div class="answer-content">
@@ -1417,6 +1727,9 @@
         }
 
         function showFollowUpAnswer(question, answer) {
+            // Preprocess the response for better formatting
+            const processedAnswer = preprocessResponse(answer);
+            
             // Configure marked options for better rendering
             marked.setOptions({
                 breaks: true,
@@ -1426,7 +1739,7 @@
             });
 
             // Render markdown to HTML
-            const markdownHtml = marked.parse(answer);
+            const markdownHtml = marked.parse(processedAnswer);
             
             answerDisplay.innerHTML = `
                 <div class="answer-content">
