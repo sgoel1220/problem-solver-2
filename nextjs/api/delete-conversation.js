@@ -6,7 +6,7 @@ async function getRedisClient() {
     if (!client) {
         client = createClient({
             username: 'default',
-            password: process.env.REDIS_DB_PASSWORD || 'lszR39WjMD38qlsVs8Vw3kFOiSbVtRtD',
+            password: process.env.REDIS_DB_PASSWORD ,
             socket: {
                 host: 'redis-14539.c305.ap-south-1-1.ec2.redns.redis-cloud.com',
                 port: 14539

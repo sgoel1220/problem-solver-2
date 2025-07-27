@@ -59,3 +59,7 @@ This is a web-based "OneClick Problem Solver" application that uses computer vis
 - Can be hosted on any static file server (GitHub Pages, Netlify, Vercel, etc.)
 - Requires HTTPS for camera API access in production
 - No environment variables needed - authentication handled through secure API
+
+
+## Backend APIs
+    the backend apis are under nextjs/api/ folder use this for making all apis
