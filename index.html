@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OneClick Problem Solver</title>
+    
+    <!-- Markdown rendering library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -264,6 +268,108 @@
             border-radius: 6px;
             margin-bottom: 20px;
             border: 1px solid #ef5350;
+        }
+
+        /* Markdown rendering styles */
+        .answer-content h1, .answer-content h2, .answer-content h3, 
+        .answer-content h4, .answer-content h5, .answer-content h6 {
+            margin: 16px 0 8px 0;
+            color: #2e7d32;
+            font-weight: 600;
+        }
+
+        .answer-content h1 { font-size: 24px; }
+        .answer-content h2 { font-size: 20px; }
+        .answer-content h3 { font-size: 18px; }
+        .answer-content h4 { font-size: 16px; }
+
+        .answer-content p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .answer-content ul, .answer-content ol {
+            margin: 8px 0 8px 20px;
+            line-height: 1.6;
+        }
+
+        .answer-content li {
+            margin: 4px 0;
+        }
+
+        .answer-content code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            color: #d63384;
+        }
+
+        .answer-content pre {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #4caf50;
+            margin: 12px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+
+        .answer-content pre code {
+            background: none;
+            padding: 0;
+            color: #333;
+        }
+
+        .answer-content blockquote {
+            border-left: 4px solid #4caf50;
+            margin: 12px 0;
+            padding: 8px 16px;
+            background: #f9f9f9;
+            font-style: italic;
+        }
+
+        .answer-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+
+        .answer-content th, .answer-content td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .answer-content th {
+            background: #f0f8f0;
+            font-weight: 600;
+        }
+
+        .answer-content strong {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .answer-content em {
+            font-style: italic;
+        }
+
+        .answer-content a {
+            color: #4caf50;
+            text-decoration: none;
+        }
+
+        .answer-content a:hover {
+            text-decoration: underline;
+        }
+
+        .answer-content hr {
+            border: none;
+            border-top: 2px solid #e0e0e0;
+            margin: 16px 0;
         }
     </style>
 </head>
@@ -639,11 +745,13 @@
             // Add default prompts if none exist
             if (Object.keys(savedPrompts).length === 0) {
                 const defaultPrompts = {
-                    'Math Solver': 'You will receive an image containing a math problem. Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"',
-                    'Text Extractor': 'Extract all the text from this image and return it exactly as shown, maintaining formatting and structure.',
-                    'Code Analyzer': 'Analyze the code in this image and explain what it does. If there are any bugs or improvements, mention them briefly.',
-                    'General Problem Solver': 'You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"',
-                    'Detailed Explanation': 'Analyze this image and provide a detailed explanation of what you see, including any problems, questions, or content that needs to be addressed. Provide step-by-step solutions where applicable.'
+                    'Math Solver (Simple)': 'You will receive an image containing a math problem. Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "**Answer: 42**"',
+                    'Math Solver (Detailed)': 'Solve the math problem in this image. Format your response using markdown with:\n\n## Problem\n[State the problem]\n\n## Solution\n[Show step-by-step work using proper mathematical notation]\n\n## Answer\n**[Final answer]**',
+                    'Text Extractor': 'Extract all the text from this image and return it exactly as shown, maintaining formatting and structure. Use markdown formatting where appropriate (headers, lists, emphasis, etc.).',
+                    'Code Analyzer': 'Analyze the code in this image. Format your response using markdown:\n\n## Code Summary\n[Brief description]\n\n## Functionality\n- [List key features]\n\n## Issues/Improvements\n- [List any problems or suggestions]\n\n## Code Quality\n[Overall assessment]',
+                    'Study Helper': 'Help me understand this educational content. Format your response with:\n\n## Key Concepts\n- [Main topics]\n\n## Explanation\n[Detailed explanation]\n\n## Examples\n[If applicable]\n\n## Summary\n[Brief recap]',
+                    'Document Scanner': 'Read and organize the content from this document/image. Use appropriate markdown formatting including headers, lists, tables, and emphasis to structure the information clearly.',
+                    'Quick Answer': 'Provide a quick, concise answer to what you see in this image. Use **bold** for the main answer and *italics* for any important notes.'
                 };
                 
                 saveSavedPrompts(defaultPrompts);
@@ -967,11 +1075,44 @@
         }
 
         function showAnswer(answer) {
+            // Configure marked options for better rendering
+            marked.setOptions({
+                breaks: true,        // Convert line breaks to <br>
+                gfm: true,          // GitHub Flavored Markdown
+                sanitize: false,    // Allow HTML (be careful in production)
+                smartypants: true   // Use smart quotes and dashes
+            });
+
+            // Render markdown to HTML
+            const markdownHtml = marked.parse(answer);
+            
             answerDisplay.innerHTML = `
                 <div class="answer-content">
-                    ${answer}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 14px; color: #666; font-weight: 500;">AI Response:</span>
+                        <button id="copyAnswerBtn" class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;">Copy</button>
+                    </div>
+                    ${markdownHtml}
                 </div>
             `;
+
+            // Add copy functionality
+            const copyBtn = document.getElementById('copyAnswerBtn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(answer).then(() => {
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                        }, 1000);
+                    }).catch(() => {
+                        copyBtn.textContent = 'Failed';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                        }, 1000);
+                    });
+                });
+            }
         }
 
         function showError(message) {
