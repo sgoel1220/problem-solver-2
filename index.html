@@ -367,6 +367,8 @@
         // API Configuration
         const AUTH_URL = 'https://test-umber-seven-44.vercel.app/api/hello';
         const PROMPT_SAVE_URL = 'https://test-umber-seven-44.vercel.app/api/save-prompt';
+        const PROMPT_GET_URL = 'https://test-umber-seven-44.vercel.app/api/get-prompts';
+        const PROMPT_DELETE_URL = 'https://test-umber-seven-44.vercel.app/api/delete-prompt';
         const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
         
         let openRouterApiKey = null;
@@ -488,12 +490,20 @@
             return false;
         }
 
-        function deleteNamedPrompt(name) {
+        async function deleteNamedPrompt(name) {
             const prompts = getSavedPrompts();
             if (prompts[name]) {
+                // Delete locally first
                 delete prompts[name];
                 saveSavedPrompts(prompts);
                 populatePromptDropdown();
+                
+                // Try to delete from server
+                const username = getFromLocalStorage(STORAGE_KEYS.USERNAME);
+                if (username) {
+                    await deletePromptFromServer(username, name);
+                }
+                
                 return true;
             }
             return false;
@@ -505,6 +515,60 @@
             if (savedPrompt) {
                 customPrompt.value = savedPrompt;
                 console.log('Loaded saved prompt from localStorage');
+            }
+        }
+
+        // Server sync functions
+        async function fetchPromptsFromServer(username) {
+            try {
+                const response = await fetch(PROMPT_GET_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.prompts) {
+                        console.log('Fetched prompts from server:', Object.keys(data.prompts).length, 'prompts');
+                        return data.prompts;
+                    }
+                }
+                console.warn('Failed to fetch prompts from server');
+                return null;
+            } catch (error) {
+                console.warn('Error fetching prompts from server:', error);
+                return null;
+            }
+        }
+
+        async function deletePromptFromServer(username, promptName) {
+            try {
+                const response = await fetch(PROMPT_DELETE_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        promptName: promptName
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('Prompt deleted from server successfully');
+                    return true;
+                } else {
+                    console.warn('Failed to delete prompt from server');
+                    return false;
+                }
+            } catch (error) {
+                console.warn('Error deleting prompt from server:', error);
+                return false;
             }
         }
 
@@ -538,6 +602,33 @@
             } catch (error) {
                 console.warn('Error saving prompt to server, but saved locally:', error);
                 return false;
+            }
+        }
+
+        // Sync prompts with server
+        async function syncPromptsWithServer(username) {
+            try {
+                // Fetch prompts from server
+                const serverPrompts = await fetchPromptsFromServer(username);
+                if (!serverPrompts) {
+                    console.log('Using local prompts only');
+                    return;
+                }
+
+                // Get local prompts
+                const localPrompts = getSavedPrompts();
+                
+                // Merge server and local prompts (server takes precedence)
+                const mergedPrompts = { ...localPrompts, ...serverPrompts };
+                
+                // Save merged prompts locally
+                saveSavedPrompts(mergedPrompts);
+                populatePromptDropdown();
+                
+                console.log('Prompts synced with server. Total prompts:', Object.keys(mergedPrompts).length);
+                
+            } catch (error) {
+                console.warn('Error syncing prompts with server:', error);
             }
         }
 
@@ -912,6 +1003,9 @@
                 showUserInfo(username);
                 hideAuthModal();
                 
+                // Sync prompts with server after successful login
+                await syncPromptsWithServer(username);
+                
             } catch (error) {
                 showAuthError(error.message || 'Login failed. Please try again.');
             } finally {
@@ -988,7 +1082,7 @@
         });
 
         // Delete prompt button event listener
-        deletePromptBtn.addEventListener('click', () => {
+        deletePromptBtn.addEventListener('click', async () => {
             const selectedName = savedPrompts.value;
             if (!selectedName) {
                 showError('Please select a prompt to delete');
@@ -996,14 +1090,26 @@
             }
             
             if (confirm(`Are you sure you want to delete the prompt "${selectedName}"?`)) {
-                if (deleteNamedPrompt(selectedName)) {
-                    savedPrompts.value = '';
-                    deletePromptBtn.textContent = 'Deleted!';
-                    setTimeout(() => {
+                try {
+                    deletePromptBtn.disabled = true;
+                    deletePromptBtn.textContent = 'Deleting...';
+                    
+                    if (await deleteNamedPrompt(selectedName)) {
+                        savedPrompts.value = '';
+                        deletePromptBtn.textContent = 'Deleted!';
+                        setTimeout(() => {
+                            deletePromptBtn.textContent = 'Delete';
+                        }, 1000);
+                    } else {
+                        showError('Failed to delete prompt');
                         deletePromptBtn.textContent = 'Delete';
-                    }, 1000);
-                } else {
+                    }
+                } catch (error) {
+                    console.error('Error deleting prompt:', error);
                     showError('Failed to delete prompt');
+                    deletePromptBtn.textContent = 'Delete';
+                } finally {
+                    deletePromptBtn.disabled = false;
                 }
             }
         });
@@ -1021,7 +1127,7 @@
         });
 
         // Initialize app - check auth and load prompts
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             // Initialize default prompts and populate dropdown
             initializeDefaultPrompts();
             populatePromptDropdown();
@@ -1031,8 +1137,12 @@
             
             // Check if user is already authenticated
             if (checkExistingAuth()) {
-                // User is already authenticated, don't show auth modal
-                console.log('User already authenticated, skipping login');
+                // User is already authenticated, sync with server
+                console.log('User already authenticated, syncing with server...');
+                const username = getFromLocalStorage(STORAGE_KEYS.USERNAME);
+                if (username) {
+                    await syncPromptsWithServer(username);
+                }
             } else {
                 // Show auth modal for new user
                 authContainer.classList.remove('hidden');
