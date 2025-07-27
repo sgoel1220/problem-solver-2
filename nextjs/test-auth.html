@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Authentication</title>
+</head>
+<body>
+    <h1>Test API Authentication</h1>
+    <form id="authForm">
+        <div>
+            <label>Username: <input type="text" id="username" required></label>
+        </div>
+        <div>
+            <label>Password: <input type="password" id="password" required></label>
+        </div>
+        <button type="submit">Test Login</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const result = document.getElementById('result');
+            
+            try {
+                const response = await fetch('/api/hello', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                result.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                result.style.color = response.ok ? 'green' : 'red';
+            } catch (error) {
+                result.innerHTML = `Error: ${error.message}`;
+                result.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>
