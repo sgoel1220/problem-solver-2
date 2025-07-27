@@ -18,7 +18,14 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
-            padding: 20px;
+            padding: 10px;
+            margin: 0;
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
         }
 
         .container {
@@ -28,42 +35,81 @@
 
         h1 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             color: #333;
+            font-size: 24px;
+        }
+        
+        @media (min-width: 768px) {
+            h1 {
+                margin-bottom: 30px;
+                font-size: 32px;
+            }
         }
 
         .app-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 100vh;
         }
 
-        @media (max-width: 768px) {
+        @media (min-width: 768px) {
             .app-grid {
-                grid-template-columns: 1fr;
+                flex-direction: row;
+                min-height: 600px;
+            }
+            
+            .camera-section {
+                flex: 1;
+                order: 2;
+            }
+            
+            .answer-section {
+                flex: 1;
+                order: 1;
             }
         }
 
         .card {
             background: white;
             border-radius: 8px;
-            padding: 20px;
+            padding: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        @media (min-width: 768px) {
+            .card {
+                padding: 20px;
+            }
         }
 
         .card h2 {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             color: #333;
+            font-size: 18px;
+        }
+        
+        @media (min-width: 768px) {
+            .card h2 {
+                margin-bottom: 15px;
+                font-size: 20px;
+            }
         }
 
         #videoContainer {
             position: relative;
             width: 100%;
-            height: 300px;
+            height: 250px;
             background: #000;
             border-radius: 8px;
             overflow: hidden;
+        }
+        
+        @media (min-width: 768px) {
+            #videoContainer {
+                height: 300px;
+            }
         }
 
         #video {
@@ -95,18 +141,33 @@
 
         .controls {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 8px;
+            margin-top: 12px;
             flex-wrap: wrap;
+        }
+        
+        @media (min-width: 768px) {
+            .controls {
+                gap: 10px;
+                margin-top: 15px;
+            }
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
             transition: all 0.2s;
+            min-height: 36px;
+        }
+        
+        @media (min-width: 768px) {
+            .btn {
+                padding: 10px 20px;
+                min-height: auto;
+            }
         }
 
         .btn-primary {
@@ -133,12 +194,18 @@
         }
 
         #answerDisplay {
-            min-height: 200px;
+            min-height: 150px;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
             color: #666;
+        }
+        
+        @media (min-width: 768px) {
+            #answerDisplay {
+                min-height: 200px;
+            }
         }
 
         .answer-content {
@@ -220,8 +287,14 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             text-align: left;
+        }
+        
+        @media (min-width: 768px) {
+            .form-group {
+                margin-bottom: 20px;
+            }
         }
 
         .form-group label {
@@ -403,17 +476,9 @@
         </div>
         
         <div class="app-grid">
-            <!-- Answer Panel -->
-            <div class="card">
-                <h2>Answer</h2>
-                <div id="answerDisplay">
-                    Capture an image with a problem to get started
-                </div>
-            </div>
-
-            <!-- Camera Panel -->
-            <div class="card">
-                <h2>Camera</h2>
+            <!-- Camera Panel (Mobile First - Top) -->
+            <div class="card camera-section">
+                <h2>📷 Capture</h2>
                 <div id="videoContainer">
                     <video id="video" autoplay playsinline muted class="hidden"></video>
                     <div id="videoOverlay" class="video-overlay">
@@ -426,7 +491,8 @@
                     <div class="form-group">
                         <label for="modelSelect">AI Model:</label>
                         <select id="modelSelect" class="form-control">
-                             <option value="meta-llama/llama-3.2-11b-vision-instruct:free">Llama 3.2 11B (Free)</option>
+                            <option value="openrouter/auto" selected>🤖 Auto (Best Available)</option>
+                            <option value="meta-llama/llama-3.2-11b-vision-instruct:free">Llama 3.2 11B (Free)</option>
                             <!-- <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free) - Vision ✓</option> -->
                             <option value="anthropic/claude-3-haiku">claude-3-haiku (Paid)</option>
                             <option value="openai/gpt-4.1-nano">GPT-4.1 nano (paid)</option>                           
@@ -436,6 +502,9 @@
                             <option value="openai/gpt-4o-mini">GPT-4o Mini (Paid)</option>
 
                         </select>
+                        <div id="modelStatus" class="hidden" style="margin-top: 5px; padding: 4px 8px; background: #e8f5e8; border-radius: 4px; border-left: 3px solid #4caf50; font-size: 12px; color: #2e7d32;">
+                            <span id="selectedModelInfo"></span>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -466,6 +535,25 @@
                 
                 <div id="cameraMode" class="camera-mode hidden"></div>
             </div>
+
+            <!-- Answer Panel (Mobile - Bottom) -->
+            <div class="card answer-section">
+                <h2>💡 Response</h2>
+                <div id="answerDisplay">
+                    Capture an image with a problem to get started
+                </div>
+                
+                <!-- Follow-up Question Section -->
+                <div id="followUpSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <div class="form-group">
+                        <label for="followUpQuestion" style="font-size: 14px; font-weight: 600; color: #333;">Ask Follow-up:</label>
+                        <div style="display: flex; gap: 8px; margin-top: 5px;">
+                            <input type="text" id="followUpQuestion" class="form-control" placeholder="Ask a follow-up question..." style="flex: 1; font-size: 14px;">
+                            <button id="askFollowUpBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">Ask</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -478,6 +566,19 @@
         const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
         
         let openRouterApiKey = null;
+        let lastCapturedImage = null; // Store the last captured image for follow-ups
+        let actualSelectedModel = null; // Store the actual model when using auto
+
+        // Model selection preferences (in order of preference)
+        const MODEL_PREFERENCES = [
+            'anthropic/claude-sonnet-4',
+            'google/gemini-2.5-flash',
+            'anthropic/claude-3-haiku', 
+            'openai/gpt-4o-mini',
+            'qwen/qwen2.5-vl-72b-instruct:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'openai/gpt-4.1-nano'
+        ];
 
         // Local Storage Keys
         const STORAGE_KEYS = {
@@ -516,6 +617,11 @@
         const userInfo = document.getElementById('userInfo');
         const currentUser = document.getElementById('currentUser');
         const logoutBtn = document.getElementById('logoutBtn');
+        const followUpSection = document.getElementById('followUpSection');
+        const followUpQuestion = document.getElementById('followUpQuestion');
+        const askFollowUpBtn = document.getElementById('askFollowUpBtn');
+        const modelStatus = document.getElementById('modelStatus');
+        const selectedModelInfo = document.getElementById('selectedModelInfo');
 
         // Local Storage Functions
         function saveToLocalStorage(key, value) {
@@ -711,6 +817,94 @@
             }
         }
 
+        // Auto model selection functions
+        async function testModelAvailability(modelName) {
+            try {
+                const testPayload = {
+                    model: modelName,
+                    messages: [{ role: 'user', content: 'test' }],
+                    max_tokens: 1
+                };
+
+                const response = await fetch(OPENROUTER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openRouterApiKey}`,
+                        'HTTP-Referer': window.location.origin,
+                        'X-Title': 'OneClick Problem Solver'
+                    },
+                    body: JSON.stringify(testPayload)
+                });
+
+                return response.status !== 402 && response.status !== 429; // Not payment required or rate limited
+            } catch (error) {
+                return false;
+            }
+        }
+
+        async function selectBestAvailableModel() {
+            if (!openRouterApiKey) {
+                return MODEL_PREFERENCES[MODEL_PREFERENCES.length - 1]; // Default to last (free) model
+            }
+
+            // Try models in preference order
+            for (const model of MODEL_PREFERENCES) {
+                const isAvailable = await testModelAvailability(model);
+                if (isAvailable) {
+                    return model;
+                }
+            }
+
+            // Fallback to the last model in the list
+            return MODEL_PREFERENCES[MODEL_PREFERENCES.length - 1];
+        }
+
+        function getModelDisplayName(modelName) {
+            const modelMap = {
+                'anthropic/claude-sonnet-4': 'Claude Sonnet 4 (Premium)',
+                'google/gemini-2.5-flash': 'Gemini 2.5 Flash (Premium)', 
+                'anthropic/claude-3-haiku': 'Claude 3 Haiku (Fast)',
+                'openai/gpt-4o-mini': 'GPT-4o Mini (Balanced)',
+                'qwen/qwen2.5-vl-72b-instruct:free': 'Qwen 2.5 VL (Free)',
+                'meta-llama/llama-3.2-11b-vision-instruct:free': 'Llama 3.2 Vision (Free)',
+                'openai/gpt-4.1-nano': 'GPT-4.1 Nano (Efficient)'
+            };
+            return modelMap[modelName] || modelName;
+        }
+
+        function showModelStatus(modelName) {
+            selectedModelInfo.textContent = `Selected: ${getModelDisplayName(modelName)}`;
+            modelStatus.classList.remove('hidden');
+        }
+
+        function hideModelStatus() {
+            modelStatus.classList.add('hidden');
+        }
+
+        async function handleModelSelection() {
+            const selectedValue = modelSelect.value;
+            
+            if (selectedValue === 'openrouter/auto') {
+                // Show loading for auto selection
+                selectedModelInfo.textContent = 'Selecting best model...';
+                modelStatus.classList.remove('hidden');
+                
+                try {
+                    actualSelectedModel = await selectBestAvailableModel();
+                    showModelStatus(actualSelectedModel);
+                    console.log('Auto-selected model:', actualSelectedModel);
+                } catch (error) {
+                    console.error('Error selecting model:', error);
+                    actualSelectedModel = MODEL_PREFERENCES[MODEL_PREFERENCES.length - 1];
+                    showModelStatus(actualSelectedModel);
+                }
+            } else {
+                actualSelectedModel = selectedValue;
+                hideModelStatus();
+            }
+        }
+
         // Sync prompts with server
         async function syncPromptsWithServer(username) {
             try {
@@ -745,13 +939,13 @@
             // Add default prompts if none exist
             if (Object.keys(savedPrompts).length === 0) {
                 const defaultPrompts = {
-                    'Math Solver (Simple)': 'You will receive an image containing a math problem. Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "**Answer: 42**"',
-                    'Math Solver (Detailed)': 'Solve the math problem in this image. Format your response using markdown with:\n\n## Problem\n[State the problem]\n\n## Solution\n[Show step-by-step work using proper mathematical notation]\n\n## Answer\n**[Final answer]**',
-                    'Text Extractor': 'Extract all the text from this image and return it exactly as shown, maintaining formatting and structure. Use markdown formatting where appropriate (headers, lists, emphasis, etc.).',
-                    'Code Analyzer': 'Analyze the code in this image. Format your response using markdown:\n\n## Code Summary\n[Brief description]\n\n## Functionality\n- [List key features]\n\n## Issues/Improvements\n- [List any problems or suggestions]\n\n## Code Quality\n[Overall assessment]',
-                    'Study Helper': 'Help me understand this educational content. Format your response with:\n\n## Key Concepts\n- [Main topics]\n\n## Explanation\n[Detailed explanation]\n\n## Examples\n[If applicable]\n\n## Summary\n[Brief recap]',
-                    'Document Scanner': 'Read and organize the content from this document/image. Use appropriate markdown formatting including headers, lists, tables, and emphasis to structure the information clearly.',
-                    'Quick Answer': 'Provide a quick, concise answer to what you see in this image. Use **bold** for the main answer and *italics* for any important notes.'
+                    'Quick Math': 'Solve this math problem. Give me just the **final answer** in bold. Keep it short.',
+                    'Read Text': 'Extract all text from this image. Keep original formatting.',
+                    'Explain Simply': 'Explain what you see in 2-3 sentences. Be concise and clear.',
+                    'Code Help': 'What does this code do? Give me:\n- **Purpose**: [1 line]\n- **Issues**: [if any]\n- **Rating**: [1-10]',
+                    'Study Notes': 'Create short study notes from this content:\n- **Key Points**: [bullet list]\n- **Summary**: [2 sentences max]',
+                    'Quick Scan': 'Scan this document and tell me the **main topic** and **key details** in bullet points.',
+                    'Homework Help': 'Help me with this homework. Show:\n1. **Answer**: [direct answer]\n2. **Why**: [brief explanation]'
                 };
                 
                 saveSavedPrompts(defaultPrompts);
@@ -969,9 +1163,20 @@
                 console.log('Base64 image length:', base64Image.length);
                 console.log('First 100 chars of base64:', base64Image.substring(0, 100));
 
+                // Store the image for follow-ups
+                lastCapturedImage = base64Image;
+
+                // Handle auto model selection if needed
+                if (modelSelect.value === 'openrouter/auto' && !actualSelectedModel) {
+                    await handleModelSelection();
+                }
+
                 // Send to AI
                 const answer = await solveProblem(base64Image);
                 showAnswer(answer);
+                
+                // Show follow-up section after getting an answer
+                followUpSection.classList.remove('hidden');
 
             } catch (error) {
                 console.error('Solve error:', error);
@@ -981,6 +1186,82 @@
             }
         }
 
+        // Send follow-up question with the same image
+        async function askFollowUp(base64Image, question) {
+            if (!openRouterApiKey) {
+                throw new Error('Not authenticated. Please login first.');
+            }
+
+            if (!base64Image) {
+                throw new Error('No image available for follow-up. Please capture a new image first.');
+            }
+
+            console.log('Sending follow-up question:', question);
+            console.log('Using model:', actualSelectedModel || modelSelect.value);
+
+            const followUpPrompt = `Based on the image I previously sent, please answer this follow-up question: "${question}"\n\nKeep your answer concise and to the point.`;
+            
+            const requestBody = {
+                model: actualSelectedModel || modelSelect.value,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: followUpPrompt
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:image/jpeg;base64,${base64Image}`
+                            }
+                        }
+                    ]
+                }],
+                max_tokens: 500, // Shorter responses for follow-ups
+                temperature: 0.1
+            };
+
+            const response = await fetch(OPENROUTER_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'OneClick Problem Solver'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                let errorDetails = errorText;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorDetails = errorJson.error?.message || errorText;
+                } catch (e) {
+                    // Keep original error text if not JSON
+                }
+                throw new Error(`Follow-up request failed: ${response.status} ${response.statusText}. Details: ${errorDetails}`);
+            }
+
+            const data = await response.json();
+            
+            // Check for different response structures
+            const answer = data.choices?.[0]?.message?.content || 
+                          data.choices?.[0]?.text || 
+                          data.message?.content ||
+                          data.content;
+
+            if (!answer) {
+                console.error('No answer found in follow-up response:', data);
+                throw new Error('No answer received from AI for follow-up question.');
+            }
+
+            return answer.trim();
+        }
+
         // Send image to Gemini API
         async function solveProblem(base64Image) {
             if (!openRouterApiKey) {
@@ -988,13 +1269,13 @@
             }
 
             console.log('Sending request to:', OPENROUTER_URL);
-            console.log('Using model:', modelSelect.value);
+            console.log('Using model:', actualSelectedModel || modelSelect.value);
             console.log('Image data length:', base64Image.length);
 
             const currentPrompt = customPrompt.value.trim() || 'You will receive an image containing a problem statement (e.g. a math or logical question). Your task is to: 1. Read the problem from the image. 2. Solve it step by step. 3. Respond with only the **final answer** — no explanation, no context. Example format: "Answer: 42"';
             
             const requestBody = {
-                model: modelSelect.value,
+                model: actualSelectedModel || modelSelect.value,
                 messages: [{
                     role: 'user',
                     content: [
@@ -1115,6 +1396,51 @@
             }
         }
 
+        function showFollowUpAnswer(question, answer) {
+            // Configure marked options for better rendering
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                sanitize: false,
+                smartypants: true
+            });
+
+            // Render markdown to HTML
+            const markdownHtml = marked.parse(answer);
+            
+            answerDisplay.innerHTML = `
+                <div class="answer-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 14px; color: #666; font-weight: 500;">Follow-up Response:</span>
+                        <button id="copyAnswerBtn" class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;">Copy</button>
+                    </div>
+                    <div style="background: #f0f8ff; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; border-left: 3px solid #007bff;">
+                        <strong>Q:</strong> ${question}
+                    </div>
+                    ${markdownHtml}
+                </div>
+            `;
+
+            // Add copy functionality
+            const copyBtn = document.getElementById('copyAnswerBtn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const fullResponse = `Q: ${question}\n\nA: ${answer}`;
+                    navigator.clipboard.writeText(fullResponse).then(() => {
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                        }, 1000);
+                    }).catch(() => {
+                        copyBtn.textContent = 'Failed';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                        }, 1000);
+                    });
+                });
+            }
+        }
+
         function showError(message) {
             answerDisplay.innerHTML = `
                 <div class="error-content">
@@ -1163,6 +1489,9 @@
         // Logout button event listener
         logoutBtn.addEventListener('click', logout);
         
+        // Model selection change listener
+        modelSelect.addEventListener('change', handleModelSelection);
+        
         // Save prompt button event listener
         savePromptBtn.addEventListener('click', async () => {
             const prompt = customPrompt.value.trim();
@@ -1204,7 +1533,22 @@
             }
         });
 
-        // Load prompt button event listener
+        // Auto-load prompt when selected from dropdown
+        savedPrompts.addEventListener('change', () => {
+            const selectedName = savedPrompts.value;
+            if (selectedName) {
+                if (loadNamedPrompt(selectedName)) {
+                    // Visual feedback that prompt was loaded
+                    const originalBorder = savedPrompts.style.borderColor;
+                    savedPrompts.style.borderColor = '#4caf50';
+                    setTimeout(() => {
+                        savedPrompts.style.borderColor = originalBorder;
+                    }, 500);
+                }
+            }
+        });
+
+        // Load prompt button event listener (kept for manual loading)
         loadPromptBtn.addEventListener('click', () => {
             const selectedName = savedPrompts.value;
             if (!selectedName) {
@@ -1252,6 +1596,52 @@
                 } finally {
                     deletePromptBtn.disabled = false;
                 }
+            }
+        });
+
+        // Follow-up question functionality
+        askFollowUpBtn.addEventListener('click', async () => {
+            const question = followUpQuestion.value.trim();
+            
+            if (!question) {
+                showError('Please enter a follow-up question');
+                return;
+            }
+            
+            if (!lastCapturedImage) {
+                showError('No image available. Please capture an image first.');
+                return;
+            }
+            
+            try {
+                askFollowUpBtn.disabled = true;
+                askFollowUpBtn.textContent = 'Asking...';
+                
+                // Show loading in answer area
+                showLoading();
+                
+                // Get follow-up answer
+                const answer = await askFollowUp(lastCapturedImage, question);
+                
+                // Show the follow-up answer with context
+                showFollowUpAnswer(question, answer);
+                
+                // Clear the question input
+                followUpQuestion.value = '';
+                
+            } catch (error) {
+                console.error('Follow-up error:', error);
+                showError(error.message || 'Failed to get follow-up answer');
+            } finally {
+                askFollowUpBtn.disabled = false;
+                askFollowUpBtn.textContent = 'Ask';
+            }
+        });
+
+        // Allow Enter key to submit follow-up question
+        followUpQuestion.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                askFollowUpBtn.click();
             }
         });
 
