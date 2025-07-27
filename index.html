@@ -746,31 +746,12 @@ Example: **Answer:** 42</textarea>
                 <div id="answerDisplay">
                     Capture an image with a problem to get started
                 </div>
-                
-                <!-- Saved Conversations Section -->
-                <div id="savedConversationsSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 14px; font-weight: 600; color: #333;">📚 Saved Conversations:</label>
-                        <div style="display: flex; gap: 4px;">
-                            <button id="refreshConversationsBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Refresh</button>
-                            <button id="toggleConversationsBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Hide</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Saved Conversations List -->
-                    <div id="savedConversationsList" class="conversation-history" style="max-height: 200px;">
-                        <div style="text-align: center; color: #666; padding: 20px;">
-                            Click "Refresh" to load your saved conversations
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Follow-up Question Section -->
                 <div id="followUpSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <label style="font-size: 14px; font-weight: 600; color: #333;">💬 Current Conversation:</label>
                         <div style="display: flex; gap: 4px;">
-                            <button id="viewSavedBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">View Saved</button>
                             <button id="clearConversationBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Clear</button>
                         </div>
                     </div>
@@ -784,6 +765,32 @@ Example: **Answer:** 42</textarea>
                             <button id="askFollowUpBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">Ask</button>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Saved Conversations Section - Moved to bottom and hidden by default -->
+                <div id="savedConversationsSection" class="hidden" style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #e0e0e0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 14px; font-weight: 600; color: #333;">📚 Saved Conversations:</label>
+                        <div style="display: flex; gap: 4px;">
+                            <button id="refreshConversationsBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Refresh</button>
+                            <button id="toggleConversationsBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Hide</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Saved Conversations List -->
+                    <div id="savedConversationsList" class="conversation-history" style="max-height: 250px;">
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            Click "Refresh" to load your saved conversations
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Auto-save indicator and View Saved Button -->
+                <div style="margin-top: 15px; text-align: center;">
+                    <div id="autoSaveIndicator" class="hidden" style="font-size: 11px; color: #4caf50; margin-bottom: 8px;">
+                        ✓ Conversation saved automatically
+                    </div>
+                    <button id="viewSavedBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">📚 View Saved Conversations</button>
                 </div>
             </div>
         </div>
@@ -870,6 +877,7 @@ Example: **Answer:** 42</textarea>
         const refreshConversationsBtn = document.getElementById('refreshConversationsBtn');
         const toggleConversationsBtn = document.getElementById('toggleConversationsBtn');
         const viewSavedBtn = document.getElementById('viewSavedBtn');
+        const autoSaveIndicator = document.getElementById('autoSaveIndicator');
 
         // Local Storage Functions
         function saveToLocalStorage(key, value) {
@@ -1597,6 +1605,11 @@ Example: **Answer:** 42</textarea>
                 addToConversation('question', 'Image captured for analysis');
                 addToConversation('answer', answer);
                 
+                // Ensure auto-save happens after both interactions are added
+                setTimeout(() => {
+                    autoSaveConversation();
+                }, 100);
+                
                 showAnswer(answer);
                 
                 // Show follow-up section after getting an answer
@@ -1796,10 +1809,36 @@ Example: **Answer:** 42`;
             const username = getFromLocalStorage(STORAGE_KEYS.USERNAME);
             if (username && conversationData.length > 0) {
                 try {
-                    await saveConversationToServer(username, conversationData, lastCapturedImage);
+                    // Generate conversation ID if it doesn't exist
+                    if (!currentConversationId) {
+                        currentConversationId = generateConversationId();
+                    }
+                    
+                    console.log('Auto-saving conversation:', currentConversationId, 'with', conversationData.length, 'interactions');
+                    const success = await saveConversationToServer(username, conversationData, lastCapturedImage);
+                    
+                    if (success) {
+                        console.log('✓ Conversation auto-saved successfully');
+                        // Show save indicator
+                        showAutoSaveIndicator();
+                    } else {
+                        console.warn('⚠ Failed to auto-save conversation');
+                    }
                 } catch (error) {
-                    console.warn('Failed to auto-save conversation:', error);
+                    console.error('❌ Error in auto-save conversation:', error);
                 }
+            } else {
+                console.log('Skipping auto-save: username=', username, 'conversationData.length=', conversationData.length);
+            }
+        }
+
+        function showAutoSaveIndicator() {
+            if (autoSaveIndicator) {
+                autoSaveIndicator.classList.remove('hidden');
+                // Hide after 3 seconds
+                setTimeout(() => {
+                    autoSaveIndicator.classList.add('hidden');
+                }, 3000);
             }
         }
 
@@ -2430,10 +2469,10 @@ Example: **Answer:** 42`;
             const isVisible = !savedConversationsSection.classList.contains('hidden');
             if (isVisible) {
                 savedConversationsSection.classList.add('hidden');
-                viewSavedBtn.textContent = 'View Saved';
+                viewSavedBtn.innerHTML = '📚 View Saved Conversations';
             } else {
                 savedConversationsSection.classList.remove('hidden');
-                viewSavedBtn.textContent = 'Hide Saved';
+                viewSavedBtn.innerHTML = '📚 Hide Saved Conversations';
                 // Auto-load conversations when showing for the first time
                 if (savedConversations.length === 0) {
                     loadSavedConversations();
