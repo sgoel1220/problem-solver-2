@@ -538,6 +538,93 @@
             margin: 16px 0;
         }
 
+        /* Conversation History Styles */
+        .conversation-history {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .conversation-history:empty {
+            display: none;
+        }
+
+        .conversation-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 14px;
+        }
+
+        .conversation-item:last-child {
+            border-bottom: none;
+        }
+
+        .conversation-question {
+            background: #f0f8ff;
+            border-left: 3px solid #007bff;
+            margin-bottom: 4px;
+            border-radius: 4px;
+        }
+
+        .conversation-question .label {
+            font-weight: 600;
+            color: #007bff;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .conversation-answer {
+            background: #f0f8f0;
+            border-left: 3px solid #4caf50;
+            border-radius: 4px;
+        }
+
+        .conversation-answer .label {
+            font-weight: 600;
+            color: #2e7d32;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .conversation-content {
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .conversation-content code {
+            background: rgba(0,0,0,0.05);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 12px;
+        }
+
+        .conversation-content strong {
+            color: inherit;
+            font-weight: 600;
+        }
+
+        @media (max-width: 767px) {
+            .conversation-history {
+                max-height: 250px;
+                margin-left: -15px;
+                margin-right: -15px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+            
+            .conversation-item {
+                padding: 6px 15px;
+                font-size: 13px;
+            }
+        }
+
         /* Focus indicator styles */
         .focus-indicator {
             position: absolute;
@@ -699,9 +786,16 @@ Example: **Answer:** 42</textarea>
                 
                 <!-- Follow-up Question Section -->
                 <div id="followUpSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
-                    <div class="form-group">
-                        <label for="followUpQuestion" style="font-size: 14px; font-weight: 600; color: #333;">Ask Follow-up:</label>
-                        <div style="display: flex; gap: 8px; margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 14px; font-weight: 600; color: #333;">💬 Conversation:</label>
+                        <button id="clearConversationBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Clear History</button>
+                    </div>
+                    
+                    <!-- Conversation History -->
+                    <div id="conversationHistory" class="conversation-history"></div>
+                    
+                    <div class="form-group" style="margin-top: 10px;">
+                        <div style="display: flex; gap: 8px;">
                             <input type="text" id="followUpQuestion" class="form-control" placeholder="Ask a follow-up question..." style="flex: 1; font-size: 14px;">
                             <button id="askFollowUpBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">Ask</button>
                         </div>
@@ -722,6 +816,7 @@ Example: **Answer:** 42</textarea>
         let openRouterApiKey = null;
         let lastCapturedImage = null; // Store the last captured image for follow-ups
         let actualSelectedModel = null; // Store the actual model when using auto
+        let conversationData = []; // Store conversation history
 
         // Model selection preferences (in order of preference)
         const MODEL_PREFERENCES = [
@@ -780,6 +875,8 @@ Example: **Answer:** 42</textarea>
         const modelStatus = document.getElementById('modelStatus');
         const selectedModelInfo = document.getElementById('selectedModelInfo');
         const focusIndicator = document.getElementById('focusIndicator');
+        const conversationHistory = document.getElementById('conversationHistory');
+        const clearConversationBtn = document.getElementById('clearConversationBtn');
 
         // Local Storage Functions
         function saveToLocalStorage(key, value) {
@@ -1422,6 +1519,9 @@ Example: **Answer:** 42</textarea>
                 // Store the image for follow-ups
                 lastCapturedImage = base64Image;
 
+                // Clear previous conversation when capturing new image
+                clearConversation();
+
                 // Handle auto model selection if needed
                 if (modelSelect.value === 'openrouter/auto' && !actualSelectedModel) {
                     await handleModelSelection();
@@ -1611,6 +1711,60 @@ Example: **Answer:** 42`;
             return answer.trim();
         }
 
+        // Conversation History Management
+        function addToConversation(type, content, timestamp = new Date()) {
+            conversationData.push({
+                type: type, // 'question' or 'answer'
+                content: content,
+                timestamp: timestamp
+            });
+            renderConversationHistory();
+        }
+
+        function renderConversationHistory() {
+            if (conversationData.length === 0) {
+                conversationHistory.innerHTML = '';
+                return;
+            }
+
+            const historyHtml = conversationData.map((item, index) => {
+                const isQuestion = item.type === 'question';
+                const cssClass = isQuestion ? 'conversation-question' : 'conversation-answer';
+                const label = isQuestion ? 'Q:' : 'A:';
+                
+                // Simple text processing for conversation display
+                let displayContent = item.content;
+                
+                // Convert basic markdown to simple HTML for conversation history
+                displayContent = displayContent
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`([^`]+)`/g, '<code>$1</code>')
+                    .replace(/\n/g, '<br>');
+                
+                // Truncate very long content
+                if (displayContent.length > 300) {
+                    displayContent = displayContent.substring(0, 300) + '...';
+                }
+
+                return `
+                    <div class="conversation-item ${cssClass}">
+                        <span class="label">${label}</span>
+                        <div class="conversation-content">${displayContent}</div>
+                    </div>
+                `;
+            }).join('');
+
+            conversationHistory.innerHTML = historyHtml;
+            
+            // Auto-scroll to bottom
+            conversationHistory.scrollTop = conversationHistory.scrollHeight;
+        }
+
+        function clearConversation() {
+            conversationData = [];
+            renderConversationHistory();
+        }
+
         // Display functions
         function showLoading() {
             answerDisplay.innerHTML = `
@@ -1727,6 +1881,10 @@ Example: **Answer:** 42`;
         }
 
         function showFollowUpAnswer(question, answer) {
+            // Add question and answer to conversation history
+            addToConversation('question', question);
+            addToConversation('answer', answer);
+            
             // Preprocess the response for better formatting
             const processedAnswer = preprocessResponse(answer);
             
@@ -1744,7 +1902,7 @@ Example: **Answer:** 42`;
             answerDisplay.innerHTML = `
                 <div class="answer-content">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 14px; color: #666; font-weight: 500;">Follow-up Response:</span>
+                        <span style="font-size: 14px; color: #666; font-weight: 500;">Latest Response:</span>
                         <button id="copyAnswerBtn" class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;">Copy</button>
                     </div>
                     <div style="background: #f0f8ff; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; border-left: 3px solid #007bff;">
@@ -1975,6 +2133,15 @@ Example: **Answer:** 42`;
         followUpQuestion.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 askFollowUpBtn.click();
+            }
+        });
+
+        // Clear conversation button event listener
+        clearConversationBtn.addEventListener('click', () => {
+            if (conversationData.length > 0) {
+                if (confirm('Are you sure you want to clear the conversation history?')) {
+                    clearConversation();
+                }
             }
         });
 
