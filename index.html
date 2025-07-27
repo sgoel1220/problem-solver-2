@@ -119,7 +119,6 @@
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1); /* Mirror front camera */
-            cursor: crosshair; /* Show focus cursor */
         }
 
         .video-overlay {
@@ -625,42 +624,6 @@
             }
         }
 
-        /* Focus indicator styles */
-        .focus-indicator {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            border: 2px solid #4caf50;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
-        }
-
-        .focus-indicator.show {
-            opacity: 1;
-        }
-
-        .focus-indicator.animate {
-            animation: focusPulse 0.6s ease-out;
-        }
-
-        @keyframes focusPulse {
-            0% {
-                transform: scale(1.5);
-                opacity: 0.8;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0.7;
-            }
-        }
     </style>
 </head>
 <body>
@@ -707,11 +670,10 @@
                 
                 <div id="videoContainer">
                     <video id="video" autoplay playsinline muted class="hidden"></video>
-                    <div id="focusIndicator" class="focus-indicator"></div>
                     <div id="videoOverlay" class="video-overlay">
                         <div class="camera-icon">📷</div>
                         <p>Click "Enable Camera" to start</p>
-                        <p style="font-size: 12px; margin-top: 8px; opacity: 0.8;">Tap on camera to focus</p>
+                        <p style="font-size: 12px; margin-top: 8px; opacity: 0.8;">High-resolution capture enabled</p>
                     </div>
                 </div>
 
@@ -874,7 +836,6 @@ Example: **Answer:** 42</textarea>
         const askFollowUpBtn = document.getElementById('askFollowUpBtn');
         const modelStatus = document.getElementById('modelStatus');
         const selectedModelInfo = document.getElementById('selectedModelInfo');
-        const focusIndicator = document.getElementById('focusIndicator');
         const conversationHistory = document.getElementById('conversationHistory');
         const clearConversationBtn = document.getElementById('clearConversationBtn');
 
@@ -1312,13 +1273,25 @@ Example: **Answer:** 42</textarea>
                 enableBtn.disabled = true;
                 enableBtn.textContent = 'Starting...';
 
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode }
-                });
+                // High-resolution camera constraints for clearer images
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { min: 640, ideal: 1920, max: 1920 },
+                        height: { min: 480, ideal: 1080, max: 1080 },
+                        frameRate: { ideal: 30, max: 60 }
+                    }
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
 
                 video.srcObject = stream;
                 video.classList.remove('hidden');
                 videoOverlay.classList.add('hidden');
+
+                // Apply camera constraints for better image quality
+                const videoTrack = stream.getVideoTracks()[0];
+                await applyCameraConstraints(videoTrack);
 
                 // Show controls
                 enableBtn.classList.add('hidden');
@@ -1326,10 +1299,6 @@ Example: **Answer:** 42</textarea>
                 switchBtn.classList.remove('hidden');
                 stopBtn.classList.remove('hidden');
                 cameraMode.classList.remove('hidden');
-
-                // Add tap to focus event listener
-                video.addEventListener('click', handleVideoClick);
-                video.addEventListener('touchend', handleVideoClick);
 
                 updateCameraMode();
 
@@ -1354,12 +1323,24 @@ Example: **Answer:** 42</textarea>
                 // Switch facing mode
                 currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
                 
-                // Start new stream
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode }
-                });
+                // High-resolution camera constraints for clearer images
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { min: 640, ideal: 1920, max: 1920 },
+                        height: { min: 480, ideal: 1080, max: 1080 },
+                        frameRate: { ideal: 30, max: 60 }
+                    }
+                };
+                
+                // Start new stream with high-resolution constraints
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
 
                 video.srcObject = stream;
+                
+                // Apply camera constraints for better image quality
+                const videoTrack = stream.getVideoTracks()[0];
+                await applyCameraConstraints(videoTrack);
                 
                 // Update mirror effect
                 video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
@@ -1381,10 +1362,6 @@ Example: **Answer:** 42</textarea>
                 stream = null;
             }
 
-            // Remove tap to focus event listeners
-            video.removeEventListener('click', handleVideoClick);
-            video.removeEventListener('touchend', handleVideoClick);
-
             video.classList.add('hidden');
             videoOverlay.classList.remove('hidden');
             
@@ -1403,91 +1380,44 @@ Example: **Answer:** 42</textarea>
             cameraMode.textContent = currentFacingMode === 'user' ? '📱 Front Camera' : '📷 Back Camera';
         }
 
-        // Focus functionality
-        async function focusAtPoint(x, y) {
-            if (!stream) return;
-
+        // Apply proper camera constraints for better image quality
+        async function applyCameraConstraints(videoTrack) {
             try {
-                const videoTrack = stream.getVideoTracks()[0];
                 const capabilities = videoTrack.getCapabilities();
+                console.log('Camera capabilities:', capabilities);
                 
-                // Check if manual focus is supported
-                if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
-                    const settings = videoTrack.getSettings();
-                    const constraints = {
-                        advanced: [{
-                            focusMode: 'manual',
-                            pointsOfInterest: [{x: x, y: y}]
-                        }]
-                    };
-                    
-                    await videoTrack.applyConstraints(constraints);
-                    console.log('Manual focus applied at point:', x, y);
-                } else if (capabilities.focusMode && capabilities.focusMode.includes('single-shot')) {
-                    // Use single-shot autofocus if available
-                    const constraints = {
-                        advanced: [{
-                            focusMode: 'single-shot',
-                            pointsOfInterest: [{x: x, y: y}]
-                        }]
-                    };
-                    
-                    await videoTrack.applyConstraints(constraints);
-                    console.log('Single-shot focus applied at point:', x, y);
-                } else {
-                    // Fallback: try continuous autofocus
-                    const constraints = {
-                        advanced: [{
-                            focusMode: 'continuous'
-                        }]
-                    };
-                    
-                    await videoTrack.applyConstraints(constraints);
-                    console.log('Continuous focus mode enabled');
+                const constraints = { advanced: [] };
+                
+                // Enable continuous autofocus if supported
+                if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                    constraints.advanced.push({ focusMode: 'continuous' });
+                    console.log('Continuous autofocus enabled');
+                } else if (capabilities.focusMode && capabilities.focusMode.includes('auto')) {
+                    constraints.advanced.push({ focusMode: 'auto' });
+                    console.log('Auto focus enabled');
                 }
+                
+                // Set optimal exposure mode if supported
+                if (capabilities.exposureMode && capabilities.exposureMode.includes('continuous')) {
+                    constraints.advanced.push({ exposureMode: 'continuous' });
+                    console.log('Continuous exposure enabled');
+                }
+                
+                // Set optimal white balance if supported
+                if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('continuous')) {
+                    constraints.advanced.push({ whiteBalanceMode: 'continuous' });
+                    console.log('Continuous white balance enabled');
+                }
+                
+                // Apply constraints if we have any
+                if (constraints.advanced.length > 0) {
+                    await videoTrack.applyConstraints(constraints);
+                    console.log('Camera constraints applied successfully');
+                }
+                
             } catch (error) {
-                console.log('Focus control not supported or failed:', error.message);
-                // Show visual feedback even if focus control fails
+                console.log('Failed to apply camera constraints:', error.message);
             }
-        }
-
-        function showFocusIndicator(x, y) {
-            // Position the focus indicator
-            focusIndicator.style.left = (x - 40) + 'px'; // Center the 80px circle
-            focusIndicator.style.top = (y - 40) + 'px';
-            
-            // Reset animation classes
-            focusIndicator.classList.remove('show', 'animate');
-            
-            // Trigger animation
-            requestAnimationFrame(() => {
-                focusIndicator.classList.add('show', 'animate');
-            });
-            
-            // Hide after animation
-            setTimeout(() => {
-                focusIndicator.classList.remove('show', 'animate');
-            }, 1500);
-        }
-
-        function handleVideoClick(event) {
-            if (!stream) return;
-            
-            const rect = video.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            
-            // Convert to normalized coordinates (0-1)
-            const normalizedX = x / rect.width;
-            const normalizedY = y / rect.height;
-            
-            console.log('Tap to focus at:', normalizedX, normalizedY);
-            
-            // Show visual feedback
-            showFocusIndicator(x, y);
-            
-            // Apply focus
-            focusAtPoint(normalizedX, normalizedY);
         }
 
         // Capture image and solve
@@ -1498,17 +1428,23 @@ Example: **Answer:** 42</textarea>
                 captureBtn.disabled = true;
                 showLoading();
 
-                // Create canvas and capture image
+                // Create canvas and capture image with high quality
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 
+                // Use the actual video dimensions for maximum quality
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 
-                context.drawImage(video, 0, 0);
+                // Enable image smoothing for better quality
+                context.imageSmoothingEnabled = true;
+                context.imageSmoothingQuality = 'high';
                 
-                // Convert to base64
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                // Draw the image
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert to base64 with high quality (0.95 for minimal compression)
+                const imageData = canvas.toDataURL('image/jpeg', 0.95);
                 const base64Image = imageData.split(',')[1];
 
                 console.log('Image captured successfully');
