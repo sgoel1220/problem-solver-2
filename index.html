@@ -200,7 +200,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            text-align: center;
             color: #666;
         }
         
@@ -218,6 +217,8 @@
             color: #2e7d32;
             font-size: 16px;
             line-height: 1.5;
+            text-align: left;
+            width: 100%;
         }
 
         .error-content {
@@ -746,11 +747,32 @@ Example: **Answer:** 42</textarea>
                     Capture an image with a problem to get started
                 </div>
                 
+                <!-- Saved Conversations Section -->
+                <div id="savedConversationsSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 14px; font-weight: 600; color: #333;">📚 Saved Conversations:</label>
+                        <div style="display: flex; gap: 4px;">
+                            <button id="refreshConversationsBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Refresh</button>
+                            <button id="toggleConversationsBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Hide</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Saved Conversations List -->
+                    <div id="savedConversationsList" class="conversation-history" style="max-height: 200px;">
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            Click "Refresh" to load your saved conversations
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Follow-up Question Section -->
                 <div id="followUpSection" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 14px; font-weight: 600; color: #333;">💬 Conversation:</label>
-                        <button id="clearConversationBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Clear History</button>
+                        <label style="font-size: 14px; font-weight: 600; color: #333;">💬 Current Conversation:</label>
+                        <div style="display: flex; gap: 4px;">
+                            <button id="viewSavedBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">View Saved</button>
+                            <button id="clearConversationBtn" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Clear</button>
+                        </div>
                     </div>
                     
                     <!-- Conversation History -->
@@ -773,12 +795,17 @@ Example: **Answer:** 42</textarea>
         const PROMPT_SAVE_URL = 'https://test-umber-seven-44.vercel.app/api/save-prompt';
         const PROMPT_GET_URL = 'https://test-umber-seven-44.vercel.app/api/get-prompts';
         const PROMPT_DELETE_URL = 'https://test-umber-seven-44.vercel.app/api/delete-prompt';
+        const CONVERSATION_SAVE_URL = 'https://test-umber-seven-44.vercel.app/api/save-conversation';
+        const CONVERSATION_GET_URL = 'https://test-umber-seven-44.vercel.app/api/get-conversations';
+        const CONVERSATION_DELETE_URL = 'https://test-umber-seven-44.vercel.app/api/delete-conversation';
         const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
         
         let openRouterApiKey = null;
         let lastCapturedImage = null; // Store the last captured image for follow-ups
         let actualSelectedModel = null; // Store the actual model when using auto
         let conversationData = []; // Store conversation history
+        let currentConversationId = null; // Current conversation session ID
+        let savedConversations = []; // List of saved conversations
 
         // Model selection preferences (in order of preference)
         const MODEL_PREFERENCES = [
@@ -838,6 +865,11 @@ Example: **Answer:** 42</textarea>
         const selectedModelInfo = document.getElementById('selectedModelInfo');
         const conversationHistory = document.getElementById('conversationHistory');
         const clearConversationBtn = document.getElementById('clearConversationBtn');
+        const savedConversationsSection = document.getElementById('savedConversationsSection');
+        const savedConversationsList = document.getElementById('savedConversationsList');
+        const refreshConversationsBtn = document.getElementById('refreshConversationsBtn');
+        const toggleConversationsBtn = document.getElementById('toggleConversationsBtn');
+        const viewSavedBtn = document.getElementById('viewSavedBtn');
 
         // Local Storage Functions
         function saveToLocalStorage(key, value) {
@@ -1149,6 +1181,101 @@ Example: **Answer:** 42</textarea>
             } catch (error) {
                 console.warn('Error syncing prompts with server:', error);
             }
+        }
+
+        // Conversation persistence functions
+        async function saveConversationToServer(username, conversationData, imageData = null) {
+            try {
+                const conversationPayload = {
+                    username: username,
+                    conversationId: currentConversationId || generateConversationId(),
+                    timestamp: new Date().toISOString(),
+                    interactions: conversationData,
+                    imageData: imageData, // Base64 image data if available
+                    model: actualSelectedModel || modelSelect.value,
+                    prompt: customPrompt.value.trim()
+                };
+
+                const response = await fetch(CONVERSATION_SAVE_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(conversationPayload)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        currentConversationId = data.conversationId || currentConversationId;
+                        console.log('Conversation saved to server successfully');
+                        return true;
+                    }
+                }
+                console.warn('Failed to save conversation to server');
+                return false;
+            } catch (error) {
+                console.warn('Error saving conversation to server:', error);
+                return false;
+            }
+        }
+
+        async function fetchConversationsFromServer(username) {
+            try {
+                const response = await fetch(CONVERSATION_GET_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.conversations) {
+                        console.log('Fetched conversations from server:', data.conversations.length, 'conversations');
+                        return data.conversations;
+                    }
+                }
+                console.warn('Failed to fetch conversations from server');
+                return null;
+            } catch (error) {
+                console.warn('Error fetching conversations from server:', error);
+                return null;
+            }
+        }
+
+        async function deleteConversationFromServer(username, conversationId) {
+            try {
+                const response = await fetch(CONVERSATION_DELETE_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        conversationId: conversationId
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('Conversation deleted from server successfully');
+                    return true;
+                } else {
+                    console.warn('Failed to delete conversation from server');
+                    return false;
+                }
+            } catch (error) {
+                console.warn('Error deleting conversation from server:', error);
+                return false;
+            }
+        }
+
+        function generateConversationId() {
+            return 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
         // Initialize default prompts
@@ -1465,6 +1592,11 @@ Example: **Answer:** 42</textarea>
 
                 // Send to AI
                 const answer = await solveProblem(base64Image);
+                
+                // Add the initial question and answer to conversation
+                addToConversation('question', 'Image captured for analysis');
+                addToConversation('answer', answer);
+                
                 showAnswer(answer);
                 
                 // Show follow-up section after getting an answer
@@ -1655,6 +1787,20 @@ Example: **Answer:** 42`;
                 timestamp: timestamp
             });
             renderConversationHistory();
+            
+            // Auto-save conversation to server
+            autoSaveConversation();
+        }
+
+        async function autoSaveConversation() {
+            const username = getFromLocalStorage(STORAGE_KEYS.USERNAME);
+            if (username && conversationData.length > 0) {
+                try {
+                    await saveConversationToServer(username, conversationData, lastCapturedImage);
+                } catch (error) {
+                    console.warn('Failed to auto-save conversation:', error);
+                }
+            }
         }
 
         function renderConversationHistory() {
@@ -1698,7 +1844,192 @@ Example: **Answer:** 42`;
 
         function clearConversation() {
             conversationData = [];
+            currentConversationId = null; // Start a new conversation session
             renderConversationHistory();
+        }
+
+        // Saved Conversations Management
+        async function loadSavedConversations() {
+            const username = getFromLocalStorage(STORAGE_KEYS.USERNAME);
+            if (!username) {
+                showError('Please log in to view saved conversations');
+                return;
+            }
+
+            try {
+                refreshConversationsBtn.disabled = true;
+                refreshConversationsBtn.textContent = 'Loading...';
+                
+                const conversations = await fetchConversationsFromServer(username);
+                if (conversations && conversations.length > 0) {
+                    savedConversations = conversations;
+                    renderSavedConversations();
+                } else {
+                    savedConversationsList.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            No saved conversations found
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+                savedConversationsList.innerHTML = `
+                    <div style="text-align: center; color: #f44336; padding: 20px;">
+                        Failed to load conversations
+                    </div>
+                `;
+            } finally {
+                refreshConversationsBtn.disabled = false;
+                refreshConversationsBtn.textContent = 'Refresh';
+            }
+        }
+
+        function renderSavedConversations() {
+            if (savedConversations.length === 0) {
+                savedConversationsList.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 20px;">
+                        No saved conversations found
+                    </div>
+                `;
+                return;
+            }
+
+            const conversationsHtml = savedConversations
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .map((conv, index) => {
+                    const date = new Date(conv.timestamp).toLocaleDateString();
+                    const time = new Date(conv.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const preview = conv.interactions[0]?.content?.substring(0, 50) + '...' || 'No content';
+                    const interactionCount = conv.interactions.length;
+                    
+                    return `
+                        <div class="conversation-item" style="cursor: pointer; border: 1px solid #e0e0e0; margin-bottom: 8px; border-radius: 4px;">
+                            <div onclick="viewConversation('${conv.conversationId}')" style="padding: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; color: #666; font-weight: 500;">${date} ${time}</span>
+                                    <span style="font-size: 11px; color: #888;">${interactionCount} interactions</span>
+                                </div>
+                                <div style="font-size: 13px; color: #333;">${preview}</div>
+                                <div style="font-size: 11px; color: #888; margin-top: 4px;">Model: ${conv.model || 'Unknown'}</div>
+                            </div>
+                            <div style="display: flex; gap: 4px; padding: 4px 8px 8px 8px;">
+                                <button onclick="viewConversation('${conv.conversationId}')" class="btn btn-secondary" style="font-size: 10px; padding: 2px 6px;">View</button>
+                                <button onclick="deleteConversation('${conv.conversationId}')" class="btn btn-secondary" style="font-size: 10px; padding: 2px 6px; color: #f44336;">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            savedConversationsList.innerHTML = conversationsHtml;
+        }
+
+        function viewConversation(conversationId) {
+            const conversation = savedConversations.find(conv => conv.conversationId === conversationId);
+            if (!conversation) {
+                showError('Conversation not found');
+                return;
+            }
+
+            // Load the conversation data
+            conversationData = conversation.interactions || [];
+            currentConversationId = conversationId;
+            
+            // Update the display
+            renderConversationHistory();
+            
+            // Show the conversation details in the answer display
+            const conversationInfo = `
+                <div style="background: #f0f8ff; padding: 12px; border-radius: 6px; border-left: 4px solid #007bff; margin-bottom: 15px;">
+                    <strong>📚 Loaded Conversation</strong><br>
+                    <small>Date: ${new Date(conversation.timestamp).toLocaleString()}</small><br>
+                    <small>Model: ${conversation.model || 'Unknown'}</small><br>
+                    <small>Interactions: ${conversation.interactions.length}</small>
+                </div>
+            `;
+            
+            if (conversation.interactions.length > 0) {
+                const lastAnswer = conversation.interactions[conversation.interactions.length - 1];
+                if (lastAnswer.type === 'answer') {
+                    showLoadedConversation(conversationInfo, lastAnswer.content);
+                }
+            }
+            
+            // Show follow-up section
+            followUpSection.classList.remove('hidden');
+            
+            // Restore image data if available
+            if (conversation.imageData) {
+                lastCapturedImage = conversation.imageData;
+            }
+        }
+
+        function showLoadedConversation(conversationInfo, lastAnswer) {
+            const processedAnswer = preprocessResponse(lastAnswer);
+            
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                sanitize: false,
+                smartypants: true
+            });
+
+            const markdownHtml = marked.parse(processedAnswer);
+            
+            answerDisplay.innerHTML = `
+                ${conversationInfo}
+                <div class="answer-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 14px; color: #666; font-weight: 500;">Last AI Response:</span>
+                        <button id="copyAnswerBtn" class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;">Copy</button>
+                    </div>
+                    ${markdownHtml}
+                </div>
+            `;
+
+            // Add copy functionality
+            const copyBtn = document.getElementById('copyAnswerBtn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(lastAnswer).then(() => {
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(() => copyBtn.textContent = 'Copy', 1000);
+                    }).catch(() => {
+                        copyBtn.textContent = 'Failed';
+                        setTimeout(() => copyBtn.textContent = 'Copy', 1000);
+                    });
+                });
+            }
+        }
+
+        async function deleteConversation(conversationId) {
+            if (!confirm('Are you sure you want to delete this conversation?')) {
+                return;
+            }
+
+            const username = getFromLocalStorage(STORAGE_KEYS.USERNAME);
+            if (!username) {
+                showError('Please log in to delete conversations');
+                return;
+            }
+
+            try {
+                const success = await deleteConversationFromServer(username, conversationId);
+                if (success) {
+                    // Remove from local array
+                    savedConversations = savedConversations.filter(conv => conv.conversationId !== conversationId);
+                    renderSavedConversations();
+                    
+                    // Clear current conversation if it was the deleted one
+                    if (currentConversationId === conversationId) {
+                        clearConversation();
+                    }
+                } else {
+                    showError('Failed to delete conversation');
+                }
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+                showError('Failed to delete conversation');
+            }
         }
 
         // Display functions
@@ -2081,6 +2412,35 @@ Example: **Answer:** 42`;
             }
         });
 
+        // Saved conversations button event listeners
+        refreshConversationsBtn.addEventListener('click', loadSavedConversations);
+
+        toggleConversationsBtn.addEventListener('click', () => {
+            const isHidden = savedConversationsList.classList.contains('hidden');
+            if (isHidden) {
+                savedConversationsList.classList.remove('hidden');
+                toggleConversationsBtn.textContent = 'Hide';
+            } else {
+                savedConversationsList.classList.add('hidden');
+                toggleConversationsBtn.textContent = 'Show';
+            }
+        });
+
+        viewSavedBtn.addEventListener('click', () => {
+            const isVisible = !savedConversationsSection.classList.contains('hidden');
+            if (isVisible) {
+                savedConversationsSection.classList.add('hidden');
+                viewSavedBtn.textContent = 'View Saved';
+            } else {
+                savedConversationsSection.classList.remove('hidden');
+                viewSavedBtn.textContent = 'Hide Saved';
+                // Auto-load conversations when showing for the first time
+                if (savedConversations.length === 0) {
+                    loadSavedConversations();
+                }
+            }
+        });
+
         // Auto-save prompt on change (debounced)
         let promptSaveTimeout;
         customPrompt.addEventListener('input', () => {
@@ -2115,6 +2475,10 @@ Example: **Answer:** 42`;
                 authContainer.classList.remove('hidden');
             }
         });
+
+        // Make functions globally available for onclick handlers
+        window.viewConversation = viewConversation;
+        window.deleteConversation = deleteConversation;
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
