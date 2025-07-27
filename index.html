@@ -802,9 +802,9 @@ Example: **Answer:** 42</textarea>
         const PROMPT_SAVE_URL = 'https://test-umber-seven-44.vercel.app/api/save-prompt';
         const PROMPT_GET_URL = 'https://test-umber-seven-44.vercel.app/api/get-prompts';
         const PROMPT_DELETE_URL = 'https://test-umber-seven-44.vercel.app/api/delete-prompt';
-        const CONVERSATION_SAVE_URL = 'https://test-umber-seven-44.vercel.app/api/save-conversation';
-        const CONVERSATION_GET_URL = 'https://test-umber-seven-44.vercel.app/api/get-conversations';
-        const CONVERSATION_DELETE_URL = 'https://test-umber-seven-44.vercel.app/api/delete-conversation';
+        const CONVERSATION_SAVE_URL = '/api/save-conversation';
+        const CONVERSATION_GET_URL = '/api/get-conversations';
+        const CONVERSATION_DELETE_URL = '/api/delete-conversation';
         const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
         
         let openRouterApiKey = null;
@@ -1204,6 +1204,11 @@ Example: **Answer:** 42</textarea>
                     prompt: customPrompt.value.trim()
                 };
 
+                console.log('📤 Saving conversation to:', CONVERSATION_SAVE_URL);
+                console.log('📦 Payload size:', JSON.stringify(conversationPayload).length, 'characters');
+                console.log('📦 Conversation ID:', conversationPayload.conversationId);
+                console.log('📦 Interactions count:', conversationPayload.interactions.length);
+
                 const response = await fetch(CONVERSATION_SAVE_URL, {
                     method: 'POST',
                     mode: 'cors',
@@ -1213,24 +1218,37 @@ Example: **Answer:** 42</textarea>
                     body: JSON.stringify(conversationPayload)
                 });
 
+                console.log('📡 Response status:', response.status, response.statusText);
+
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('📥 Response data:', data);
                     if (data.success) {
                         currentConversationId = data.conversationId || currentConversationId;
-                        console.log('Conversation saved to server successfully');
+                        console.log('✅ Conversation saved to server successfully');
                         return true;
+                    } else {
+                        console.error('❌ Server returned success=false:', data);
+                        return false;
                     }
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Failed to save conversation. Status:', response.status);
+                    console.error('❌ Error response:', errorText);
+                    return false;
                 }
-                console.warn('Failed to save conversation to server');
-                return false;
             } catch (error) {
-                console.warn('Error saving conversation to server:', error);
+                console.error('❌ Error saving conversation to server:', error);
+                console.error('❌ Error details:', error.message, error.stack);
                 return false;
             }
         }
 
         async function fetchConversationsFromServer(username) {
             try {
+                console.log('📤 Fetching conversations from:', CONVERSATION_GET_URL);
+                console.log('📤 For username:', username);
+
                 const response = await fetch(CONVERSATION_GET_URL, {
                     method: 'POST',
                     mode: 'cors',
@@ -1240,17 +1258,27 @@ Example: **Answer:** 42</textarea>
                     body: JSON.stringify({ username: username })
                 });
 
+                console.log('📡 Response status:', response.status, response.statusText);
+
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('📥 Response data:', data);
                     if (data.success && data.conversations) {
-                        console.log('Fetched conversations from server:', data.conversations.length, 'conversations');
+                        console.log('✅ Fetched conversations from server:', data.conversations.length, 'conversations');
                         return data.conversations;
+                    } else {
+                        console.warn('⚠ Server returned success=false or no conversations:', data);
+                        return [];
                     }
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Failed to fetch conversations. Status:', response.status);
+                    console.error('❌ Error response:', errorText);
+                    return null;
                 }
-                console.warn('Failed to fetch conversations from server');
-                return null;
             } catch (error) {
-                console.warn('Error fetching conversations from server:', error);
+                console.error('❌ Error fetching conversations from server:', error);
+                console.error('❌ Error details:', error.message, error.stack);
                 return null;
             }
         }

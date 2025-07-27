@@ -4,6 +4,7 @@ let client = null;
 
 async function getRedisClient() {
     if (!client) {
+        console.log('🔗 Creating new Redis client...');
         client = createClient({
             username: 'default',
             password: process.env.REDIS_DB_PASSWORD || 'lszR39WjMD38qlsVs8Vw3kFOiSbVtRtD',
@@ -13,28 +14,53 @@ async function getRedisClient() {
             }
         });
 
-        client.on('error', err => console.log('Redis Client Error', err));
-        await client.connect();
+        client.on('error', err => {
+            console.error('❌ Redis Client Error:', err);
+        });
+
+        client.on('connect', () => {
+            console.log('✅ Redis client connected');
+        });
+
+        client.on('ready', () => {
+            console.log('✅ Redis client ready');
+        });
+
+        try {
+            await client.connect();
+            console.log('✅ Redis connection established');
+        } catch (error) {
+            console.error('❌ Failed to connect to Redis:', error);
+            throw error;
+        }
     }
     return client;
 }
 
 export default async function handler(req, res) {
+    console.log('📨 Save conversation API called');
+    console.log('📨 Method:', req.method);
+    console.log('📨 Headers:', req.headers);
+
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
+        console.log('✅ Handling CORS preflight');
         res.status(200).end();
         return;
     }
 
     if (req.method !== 'POST') {
+        console.log('❌ Invalid method:', req.method);
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
     try {
+        console.log('📦 Request body received:', req.body ? 'Yes' : 'No');
+        
         const { 
             username, 
             conversationId, 
@@ -45,7 +71,15 @@ export default async function handler(req, res) {
             prompt 
         } = req.body;
 
+        console.log('📦 Parsed data:');
+        console.log('   - username:', username);
+        console.log('   - conversationId:', conversationId);
+        console.log('   - interactions count:', interactions?.length);
+        console.log('   - has imageData:', !!imageData);
+        console.log('   - model:', model);
+
         if (!username || !conversationId || !interactions) {
+            console.log('❌ Missing required fields');
             return res.status(400).json({ 
                 success: false, 
                 error: 'Missing required fields: username, conversationId, interactions' 

@@ -4,6 +4,7 @@ let client = null;
 
 async function getRedisClient() {
     if (!client) {
+        console.log('🔗 Creating new Redis client...');
         client = createClient({
             username: 'default',
             password: process.env.REDIS_DB_PASSWORD || 'lszR39WjMD38qlsVs8Vw3kFOiSbVtRtD',
@@ -13,8 +14,17 @@ async function getRedisClient() {
             }
         });
 
-        client.on('error', err => console.log('Redis Client Error', err));
-        await client.connect();
+        client.on('error', err => {
+            console.error('❌ Redis Client Error:', err);
+        });
+
+        try {
+            await client.connect();
+            console.log('✅ Redis connection established');
+        } catch (error) {
+            console.error('❌ Failed to connect to Redis:', error);
+            throw error;
+        }
     }
     return client;
 }
